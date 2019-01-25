@@ -27,4 +27,5 @@ public:
 private:
 	unsigned int csc_, layer_, x_hit_, y_hit_; //chamber #, layer #, channel x,y
 	double x_local, x_global, y_local, y_global, z_global; //x,y,z for local detector coordinates and global test stand coordinates
+	double get_mapped_pos(int channel) const;
 };

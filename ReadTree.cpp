@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <string>
-#include <cmath> ////////////////////////////////////////////////////
+#include <cmath> 
 #include <cstdio>
 
 #include "ReadTree.h"
@@ -19,6 +19,7 @@
 #include "TPolyLine3D.h"	//<TPolyLine3D.h>
 #include "TGraph.h"
 #include "TString.h"
+#include "TH2F.h"
 
 using std::cout;
 using std::endl;
@@ -59,7 +60,7 @@ ReadTree::ReadTree(TApplication* app, TString fileName, double voltage = 0)
 		vmm_tree = (TTree*) root_file->Get("CSC_Data"); //Try and get the tree from it
 		timeHist = (TH1I*) root_file->Get("timingHist");
 		csc1tHist = (TH1I*) root_file->Get("csc1timingHist");
-		csc2tHist = (TH1I*) root_file->Get("csc2timingHist");
+		csc2tHist = (TH1I*) root_file->Get("csc0timingHist");
 		if (getData(vmm_tree))
 		{
 		  if(timeHist != NULL)
@@ -86,7 +87,7 @@ ReadTree::ReadTree(TApplication* app, TString fileName, double voltage = 0)
 		      
 		      if (csc2tHist != NULL)
 			{
-			  csc2tHist->SetTitle("CSC #2 Timing");
+			  csc2tHist->SetTitle("CSC #0 Timing");
 			  csc2tHist->SetXTitle("Hit BCID - Trigger BCID [nano sec]");
 			  csc2tHist->SetYTitle("Count");
 			  csc2tHist->SetLineColor(kBlue);
@@ -101,14 +102,14 @@ ReadTree::ReadTree(TApplication* app, TString fileName, double voltage = 0)
 		      timeCanv->cd(2);
 		      // timeCanv->BuildLegend();
 		      timeCanv->Update();
-		      timeCanv->Print("timing.pdf");
+		      timeCanv->Print("timing.png");
 		    }
 		  
 		  if (voltage > 0)
 		    calcBoardEfficiencies(voltage);
 
 		  makeOccupancyPlots();
-
+		  plotResiduals();
 		  drawTracks();
 		  root_file->Close();
 		
@@ -375,7 +376,7 @@ void ReadTree::makeOccupancyPlots()
     }
 
 
-  occCanv->Print("occupancies.pdf");
+  occCanv->Print("occupancies.png");
 }
 
 
@@ -383,7 +384,7 @@ void ReadTree::makeOccupancyPlots()
 //Returns an array of the efficiency that a hit was registerd in each plane of the cscs when a track was constructed
 void ReadTree::calcLayerTrackEfficiencies(double efficiencies[])
 {
-  int numPlanes = 12; //3 CSCs * 4 planes/csc
+  int numPlanes = 16; //2 CSCs * 4 planes/csc
   int nHits;
   int count;
   EventData event;
@@ -428,4 +429,62 @@ void ReadTree::calcLayerTrackEfficiencies(double efficiencies[])
 
       efficiencies[plane] = double(nHits) / count;  
     }
+}
+
+
+void ReadTree::plotResiduals()
+{
+  const int NUM_LAYERS = 4;
+  EventData event;
+  double x, y, z;
+  double xPred, yPred;
+  int csc;
+  Position pos;
+  
+
+  //Histograms to plot the deviation between theoretical (track-based) and actual (hits) positions
+  TH2F *csc1Resids = new TH2F("csc1Devs","Abs(track pos - hit pos)",20, -10, 10, 20, -10, 10);
+  TH2F *csc0Resids = new TH2F("csc2Devs","Abs(track pos - hit pos)",20, -10, 10, 20, -10, 10);
+
+  for (int eventi = 0; eventi < eventList.size(); eventi++) //For each event
+    {
+      event = eventList.at(eventi);
+      Track *track = event.getTrack();
+      int numPos = event.position_list.size();
+      if (numPos < 3 || !event.goodTrack()) //If not at least 3 hits or a good track, cannot use
+	continue;
+	  
+	  int posN = 0;
+	  while(posN < numPos)
+	    {
+	      pos = event.position_list.at(posN);
+	      csc = pos.csc();
+	      x = pos.x();
+	      y = pos.y();
+	      z = pos.z();
+
+	      xPred = track->x(z);
+	      yPred = track->y(z);
+
+	      if (csc == 0)
+		csc1Resids->Fill(x - xPred, y - yPred);
+	      else
+		csc0Resids->Fill(x - xPred, y - yPred);
+
+	      posN++;
+	    }
+    }
+
+  TCanvas *residCanv = new TCanvas("residCanv","Residuals",1000,800);
+  residCanv->Divide(2,1);
+  csc1Resids->SetXTitle("x_hit - x_track [cm]");
+  csc1Resids->SetYTitle("y_hit - x_track [cm]");
+  csc0Resids->SetXTitle("x_hit - x_track [cm]");
+  csc0Resids->SetYTitle("y_hit - y_track [cm]");
+  residCanv->cd(1);
+  csc1Resids->Draw("colz");
+  residCanv->cd(2);
+  csc0Resids->Draw("colz");
+  
+  residCanv->Print("residuals.png");
 }

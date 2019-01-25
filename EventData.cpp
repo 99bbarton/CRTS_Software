@@ -50,56 +50,44 @@ std::vector<Position> EventData::getPositionList() const
 //Get the layer for a given board ID
 int EventData::getLayer(int boardID) const
 {
-	int bid = boardID % BOARD_START_ID;
+int bid = boardID % BOARD_START_ID;
 	int layer = -1;
 	switch (bid)
 	{
 		//CSC Top
-	//case 0:
-	//case 1:
-	//	//CSC Bottom
-	//case 8:
-	//case 9:
-	//	layer = 0;
-	//	break;
-
-	//	//CSC Top
-	//case 2:
-	//case 3:
-	//	//CSC Bottom
-	//case 10:
-	//case 11:
-	//	layer = 1;
-	//	break;
-
-	//	//CSC Top
-	//case 4:
-	//case 5:
-	//	//CSC Bottom
-	//case 12:
-	//case 13:
-	//	layer = 2;
-	//	break;
-
-	//	//CSC Top
-	//case 6:
-	//case 7:
-	//	//CSC Bottom
-	//case 14:
-	//case 15:
-	//	layer = 3;
-	//	break;
 	case 0:
 	case 1:
+		//CSC Bottom
+	case 8:
+	case 9:
+		layer = 3;
+		break;
+
+		//CSC Top
 	case 2:
 	case 3:
-	case 4: 
-	case 5:
-		layer = 0;
+		//CSC Bottom
+	case 10:
+	case 11:
+		layer = 2;
 		break;
+
+		//CSC Top
+	case 4:
+	case 5:
+		//CSC Bottom
+	case 12:
+	case 13:
+		layer = 1;
+		break;
+
+		//CSC Top
 	case 6:
 	case 7:
-		layer = 3; //bottom layer
+		//CSC Bottom
+	case 14:
+	case 15:
+		layer = 0;
 		break;
 	default:
 		layer = -1;
@@ -114,41 +102,27 @@ int EventData::getCSC(int boardID) const
 	int csc = -1;
 	switch (bid)
 	{
-	//	//CSC Top
-	//case 0:
-	//case 1:
-	//case 2:
-	//case 3:
-	//case 4:
-	//case 5:
-	//case 6:
-	//case 7:
-	//	csc = 0;
-	//	break;
-	//	//CSC Bottom
-	//case 8:
-	//case 9:
-	//case 10:
-	//case 11:
-	//case 12:
-	//case 13:
-	//case 14:
-	//case 15:
-	//	csc = 1;
-	//	break;
+		//CSC Top
 	case 0:
 	case 1:
-		csc = 0;
-		break;
 	case 2:
 	case 3:
-		csc = 1;
-		break;
 	case 4:
 	case 5:
 	case 6:
 	case 7:
-		csc = 2;
+		csc = 1;
+		break;
+		//CSC Bottom
+	case 8:
+	case 9:
+	case 10:
+	case 11:
+	case 12:
+	case 13:
+	case 14:
+	case 15:
+		csc = 0;
 		break;
 	default:
 		csc = -1;
