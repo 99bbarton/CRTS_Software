@@ -112,7 +112,7 @@ bool ProcessBinary::parseFile()
 
 	TH1I *timingHist = new TH1I("timingHist", "Timing",  50, -25, 25);  
 	TH1I *c1TimingHist = new TH1I("csc1timingHist", "CSC#1 Timing", 50, -25, 25);
-	TH1I *c2TimingHist = new TH1I("csc2timingHist", "CSC#2 Timing", 50, -25, 25);
+	TH1I *c0TimingHist = new TH1I("csc0timingHist", "CSC#0 Timing", 50, -25, 25);
 	TH1I *c3TimingHist = new TH1I("csc3timingHist", "CSC#3 Timing", 50, -25, 25);
 
 	//Loop over each packet in the buffer, pulling out the relevant information
@@ -179,7 +179,7 @@ bool ProcessBinary::parseFile()
 			  }
 			else if (boardId >= (BOARD_START_ID + 8) && boardId < (BOARD_START_ID + 16))
 			  {
-			    c2TimingHist->Fill(trigTime);
+			    c0TimingHist->Fill(trigTime);
 			  }
 
 			//confirm that the hit falls within the time for cosmic hits
@@ -229,7 +229,7 @@ bool ProcessBinary::parseFile()
 
 	timingHist->Write();
 	c1TimingHist->Write();
-	c2TimingHist->Write();
+	c0TimingHist->Write();
 	proc_tree->Write(); //save everything to the file
 	
       

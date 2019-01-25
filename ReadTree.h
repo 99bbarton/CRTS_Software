@@ -24,13 +24,13 @@ private:
 	TBranch* b_chans_board[NUM_BOARDS]; //array of pointers to each board branch
 	TH1I *timeHist; //Pointer to histogram of time diff b/w scinttilator and hits
 	TH1I *csc1tHist; //Timing histograms of individual chambers
-	TH1I *csc2tHist;
+	TH1I *csc0tHist;
 	EventData dEvent;
 	int trigCount;
 	
 
 public:
-	ReadTree(TApplication*, TString, double);
+	ReadTree(TApplication*, TString, bool[], double);
 	virtual ~ReadTree();
 	bool getData(TTree*);
 	void drawTracks();
@@ -38,6 +38,7 @@ public:
 	void makeOccupancyPlots();
 	void calcLayerTrackEfficiencies(double efficiencies[]);
 	void plotResiduals();
+	void plotTimingHists(TH1I*, TH1I*, TH1I*);
 
 };
 
