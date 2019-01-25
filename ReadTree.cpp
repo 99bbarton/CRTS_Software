@@ -27,31 +27,82 @@ using std::string;
 
 int main(int argc, char* argv[])
 {
-  if (argc < 2 || argc > 3)
+  if (argc < 2 || argc > 4)
 	{
-		cout << "Usage: ReadTree [inputFilename] <voltage>" << endl;
-		return 0;
+		cout << "Usage: ReadTree [inputFilename] <options>" << endl;
+		cout << "Allowed options: " << endl;
+		cout << "-t : Create CSC timing histograms - written to \"timings.png\"" << endl;
+		cout << "-r : Create residuals plots - written to \"residuals.png\"" << endl;
+		cout << "-o : Creat occupancy plots for each board - written to \"occupancies.png\"" << endl;
+		cout << "-e <voltage> : Calculate per-board efficiencies - written to \"efficiencies.txt\"" << endl;
+		exit(-1);
 	}
 
 	string inputFileName = argv[1];
 	cout << "File: " << inputFileName << endl;
 
-	double voltage = 0;
-	if (argc > 2)
+	//Options variables - default to false (0)
+	bool effs = false, timing = false, resids = false, occs = false;
+	bool options[4];
+	double voltage;
+	int op;
+	while((op = getopt(argc, argv, "tTrRoOe:E:")) != -1)
 	  {
-	    voltage = atof(argv[2]);
+	    switch (op)
+	      {
+	      case 't':
+		timing = true;
+		break;
+	      case 'T':
+		timing = true;
+		break;
+	      case 'r':
+		resids = true;
+		break;
+	      case 'R':
+		resids = true;
+		break;
+	      case 'o':
+		occs = true;
+		break;
+	      case 'O':
+		occs = true;
+		break;
+	      case 'e':
+		effs = true;
+		voltage = atof(optarg);
+		break;
+	      case 'E':
+		effs = true;
+		voltage = atof(optarg);
+		break;
+	      case '?':
+		if (optopt == 'e' || optopt == 'E')
+		  {
+		    cout << "Additional voltage argument is required. e.g: $ReadTree dataFile.root -e 3000.0" << endl;
+		    return 1;
+		  }
+	      default:
+		cout << "Unrecognized option. Run ReadTree with no arguments for list of accepted options" << endl;
+		return 1;
+	      }
 	  }
+	options[0] = timing;
+	options[1] = resids;
+	options[2] = occs;
+	options[3] = effs;
+	
 
 	TApplication *thisApp = new TApplication("ReadTree", &argc, argv);
 
 
 		  
-	ReadTree processor(thisApp, inputFileName, voltage);
+	ReadTree processor(thisApp, inputFileName, options, voltage);
 
 	return 1;
 }
 
-ReadTree::ReadTree(TApplication* app, TString fileName, double voltage = 0)
+ReadTree::ReadTree(TApplication* app, TString fileName, bool options[], double voltage = 0)
 {
 	theApp = app;
 	TFile *root_file = new TFile(fileName.Data(), "READ");
@@ -60,56 +111,21 @@ ReadTree::ReadTree(TApplication* app, TString fileName, double voltage = 0)
 		vmm_tree = (TTree*) root_file->Get("CSC_Data"); //Try and get the tree from it
 		timeHist = (TH1I*) root_file->Get("timingHist");
 		csc1tHist = (TH1I*) root_file->Get("csc1timingHist");
-		csc2tHist = (TH1I*) root_file->Get("csc0timingHist");
+		csc0tHist = (TH1I*) root_file->Get("csc0timingHist");
 		if (getData(vmm_tree))
 		{
-		  if(timeHist != NULL)
-		    {
-		      TCanvas *timeCanv = new TCanvas("timeCanv", "Timing", 1000,1000);
-		      timeCanv->Divide(2,2);
+		  if(timeHist != NULL && options[0]) //If timing option is specified and histogram exists
+		    plotTimingHists(timeHist, csc1tHist, csc0tHist);
+	       
+		  if (options[1]) // If residuals options is specified
+		    plotResiduals();
 
-		      timeHist->SetTitle("Timing Difference of Hits to Triggers");
-		      timeHist->SetXTitle("Hit BCID - Trigger BCID [nano sec]");
-		      timeHist->SetYTitle("Count");
-		      if(csc1tHist != NULL)
-			{
-			  csc1tHist->SetTitle("CSC #1 Timing");
-			  csc1tHist->SetXTitle("Hit BCID - Trigger BCID [nano sec]");
-			  csc1tHist->SetYTitle("Count");
-			  csc1tHist->SetLineColor(kRed);
-			  timeCanv->cd(3);
-			  csc1tHist->Draw();
-			  timeCanv->cd(2);
-			  TH1I *copy = new TH1I(*csc1tHist);
-			  copy->SetTitle("Timing Difference of Hits to Triggers");
-			  copy->Draw();
-			}
-		      
-		      if (csc2tHist != NULL)
-			{
-			  csc2tHist->SetTitle("CSC #0 Timing");
-			  csc2tHist->SetXTitle("Hit BCID - Trigger BCID [nano sec]");
-			  csc2tHist->SetYTitle("Count");
-			  csc2tHist->SetLineColor(kBlue);
-			  timeCanv->cd(4);
-			  csc2tHist->Draw();
-			  timeCanv->cd(2);
-			  csc2tHist->Draw("same");
-			}
-		      
-		      timeCanv->cd(1);
-		      timeHist->Draw();
-		      timeCanv->cd(2);
-		      // timeCanv->BuildLegend();
-		      timeCanv->Update();
-		      timeCanv->Print("timing.png");
-		    }
-		  
-		  if (voltage > 0)
+		  if (options[2]) //If occupancies option is specified
+		    makeOccupancyPlots();
+		    
+		  if (options[3] && voltage > 0) //If efficiencies option is selected and valid voltage supplied
 		    calcBoardEfficiencies(voltage);
-
-		  makeOccupancyPlots();
-		  plotResiduals();
+		  
 		  drawTracks();
 		  root_file->Close();
 		
@@ -273,6 +289,50 @@ void ReadTree::drawTracks()
 		std::cin.get(input);
 
 	} while (input == '\n' && trackNum < eventList.size());
+}
+
+
+//Plot timing difference of CSC hits to triggers
+void ReadTree::plotTimingHists(TH1I *timeHist, TH1I *csc1tHist, TH1I *csc0tHist)
+{
+  TCanvas *timeCanv = new TCanvas("timeCanv", "Timing", 1000,1000);
+  timeCanv->Divide(2,2);
+
+  timeHist->SetTitle("Timing Difference of Hits to Triggers");
+  timeHist->SetXTitle("Hit BCID - Trigger BCID [nano sec]");
+  timeHist->SetYTitle("Count");
+  if(csc1tHist != NULL)
+    {
+      csc1tHist->SetTitle("CSC #1 Timing");
+      csc1tHist->SetXTitle("Hit BCID - Trigger BCID [nano sec]");
+      csc1tHist->SetYTitle("Count");
+      csc1tHist->SetLineColor(kRed);
+      timeCanv->cd(3);
+      csc1tHist->Draw();
+      timeCanv->cd(2);
+      TH1I *copy = new TH1I(*csc1tHist);
+      copy->SetTitle("Timing Difference of Hits to Triggers");
+      copy->Draw();
+    }
+  
+  if (csc0tHist != NULL)
+    {
+      csc0tHist->SetTitle("CSC #0 Timing");
+      csc0tHist->SetXTitle("Hit BCID - Trigger BCID [nano sec]");
+      csc0tHist->SetYTitle("Count");
+      csc0tHist->SetLineColor(kBlue);
+      timeCanv->cd(4);
+      csc0tHist->Draw();
+      timeCanv->cd(2);
+      csc0tHist->Draw("same");
+    }
+  
+  timeCanv->cd(1);
+  timeHist->Draw();
+  timeCanv->cd(2);
+  // timeCanv->BuildLegend();
+  timeCanv->Update();
+  timeCanv->Print("timing.png");
 }
 
 
