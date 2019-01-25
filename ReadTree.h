@@ -37,6 +37,7 @@ public:
 	void calcBoardEfficiencies(double voltage);
 	void makeOccupancyPlots();
 	void calcLayerTrackEfficiencies(double efficiencies[]);
+	void plotResiduals();
 
 };
 
