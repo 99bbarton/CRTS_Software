@@ -494,7 +494,6 @@ void ReadTree::calcLayerTrackEfficiencies(double efficiencies[])
 
 void ReadTree::plotResiduals()
 {
-  const int NUM_LAYERS = 4;
   EventData event;
   double x, y, z;
   double xPred, yPred;
@@ -503,8 +502,8 @@ void ReadTree::plotResiduals()
   
 
   //Histograms to plot the deviation between theoretical (track-based) and actual (hits) positions
-  TH2F *csc1Resids = new TH2F("csc1Devs","Abs(track pos - hit pos)",20, -10, 10, 20, -10, 10);
-  TH2F *csc0Resids = new TH2F("csc2Devs","Abs(track pos - hit pos)",20, -10, 10, 20, -10, 10);
+  TH2F *csc1Resids = new TH2F("csc1Devs","CSC #1 Abs(track pos - hit pos)",100, -5, 5, 100, -5, 5);
+  TH2F *csc0Resids = new TH2F("csc2Devs","CSC #0 Abs(track pos - hit pos)",100, -5, 5, 100, -5, 5);
 
   for (int eventi = 0; eventi < eventList.size(); eventi++) //For each event
     {
@@ -512,7 +511,7 @@ void ReadTree::plotResiduals()
       Track *track = event.getTrack();
       int numPos = event.position_list.size();
       if (numPos < 3 || !event.goodTrack()) //If not at least 3 hits or a good track, cannot use
-	continue;
+      	continue;
 	  
 	  int posN = 0;
 	  while(posN < numPos)
@@ -527,9 +526,9 @@ void ReadTree::plotResiduals()
 	      yPred = track->y(z);
 
 	      if (csc == 0)
-		csc1Resids->Fill(x - xPred, y - yPred);
-	      else
 		csc0Resids->Fill(x - xPred, y - yPred);
+	      else if (csc == 1)
+		csc1Resids->Fill(x - xPred, y - yPred);
 
 	      posN++;
 	    }
