@@ -31,10 +31,12 @@ int main(int argc, char* argv[])
 	{
 		cout << "Usage: ReadTree [inputFilename] <options>" << endl;
 		cout << "Allowed options: " << endl;
+		cout << "-p : Plot tracks" << endl;
 		cout << "-t : Create CSC timing histograms - written to \"timings.png\"" << endl;
 		cout << "-r : Create residuals plots - written to \"residuals.png\"" << endl;
 		cout << "-o : Creat occupancy plots for each board - written to \"occupancies.png\"" << endl;
 		cout << "-e <voltage> : Calculate per-board efficiencies - written to \"efficiencies.txt\"" << endl;
+		cout << "-c <voltage> : Calc per-board effs using other csc hits count not event count" << endl;
 		exit(-1);
 	}
 
@@ -42,14 +44,20 @@ int main(int argc, char* argv[])
 	cout << "File: " << inputFileName << endl;
 
 	//Options variables - default to false (0)
-	bool effs = false, timing = false, resids = false, occs = false;
-	bool options[4];
+	bool effs = false, timing = false, resids = false, occs = false, hitEffs = false, tracks = false;
+	bool options[6];
 	double voltage;
 	int op;
-	while((op = getopt(argc, argv, "tTrRoOe:E:")) != -1)
+	while((op = getopt(argc, argv, "tTrRoOe:E:c:C")) != -1)
 	  {
 	    switch (op)
 	      {
+	      case 'p':
+		tracks = true;
+		break;
+	      case 'P':
+		tracks = true;
+		break;
 	      case 't':
 		timing = true;
 		break;
@@ -76,10 +84,18 @@ int main(int argc, char* argv[])
 		effs = true;
 		voltage = atof(optarg);
 		break;
+	      case 'c':
+		hitEffs = true;
+		voltage = atof(optarg);
+		break;
+	      case 'C':
+		hitEffs = true;
+		voltage = atof(optarg);
+		break;
 	      case '?':
-		if (optopt == 'e' || optopt == 'E')
+		if (optopt == 'e' || optopt == 'E' || optopt == 'h' || optopt == 'H')
 		  {
-		    cout << "Additional voltage argument is required. e.g: $ReadTree dataFile.root -e 3000.0" << endl;
+		    cout << "Additional voltage argument is required. e.g: $ReadTree dataFile.root -e/-h 3000.0" << endl;
 		    return 1;
 		  }
 	      default:
@@ -91,11 +107,11 @@ int main(int argc, char* argv[])
 	options[1] = resids;
 	options[2] = occs;
 	options[3] = effs;
+	options[4] = hitEffs;
+	options[5] = tracks;
 	
 
 	TApplication *thisApp = new TApplication("ReadTree", &argc, argv);
-
-
 		  
 	ReadTree processor(thisApp, inputFileName, options, voltage);
 
@@ -125,8 +141,13 @@ ReadTree::ReadTree(TApplication* app, TString fileName, bool options[], double v
 		    
 		  if (options[3] && voltage > 0) //If efficiencies option is selected and valid voltage supplied
 		    calcBoardEfficiencies(voltage);
-		  
-		  drawTracks();
+
+		  if (options[4] && voltage > 0) //If efficiencies using other board hits is specified
+		    calcEfficienciesWithHits(voltage);
+
+		  if (options[5]) // If draw tracks option is specified
+		    drawTracks();
+
 		  root_file->Close();
 		
 		}
@@ -362,14 +383,14 @@ void ReadTree::calcBoardEfficiencies(double voltage)
 	      if (chans[c] > 0)
 		{
 		  hitCounts[b]++;
-		  break; //If found a hit, skip to the next board for efficiencies sake
+		   break; //If found a hit, skip to the next board for efficiencies sake
 		}
 	    }
 	}
     }
 
   // fprintf(effsFile, "#Voltage\tboard 1 efficiency\t...\tboard 16 efficiency\taverage efficiency\n");
-  fprintf(effsFile, "%4.1lf\t", voltage);
+  fprintf(effsFile, "%4.1lf    \t", voltage);
   double avgEff = 0;
   int hitBoardCount = 0;
   //Efficiency is simply the number of hits on the board / total number of events
@@ -442,54 +463,68 @@ void ReadTree::makeOccupancyPlots()
 
 
 //Returns an array of the efficiency that a hit was registerd in each plane of the cscs when a track was constructed
-void ReadTree::calcLayerTrackEfficiencies(double efficiencies[])
+void ReadTree::calcEfficienciesWithHits(double voltage)
 {
-  int numPlanes = 16; //2 CSCs * 4 planes/csc
-  int nHits;
-  int count;
+  int expectedHits[NUM_BOARDS] = {-1};
+  double efficiencies[NUM_BOARDS] = {0};
   EventData event;
-  Position pos;
-  double pos_eps_cm = 1.0; /////////////////////////////// Radius of disk about track to search for a layer hit 
+  int numEvents = eventList.size();
 
-
-  for (int plane = 0; plane < numPlanes; plane++) //For each layer
+  FILE *effsFile = fopen("efficiencies.txt", "a+");
+  
+  for (int e = 0; e < numEvents; e++) //For each event
     {
-      nHits = 0;
-      count = 0;
-      
-      for ( int eventi = 0; eventi < eventList.size(); eventi++) //For each event
-	{
-	  event = eventList.at(eventi);
-	  Track *track = event.getTrack();
-	  int numPos = event.position_list.size();
-	  //if (numPos < 3 || !event.goodTrack()) //If not at least 3 hits or a good track, cannot use to calc efficiency
-	      // continue;
-	  
-	  //Calculate the expected x and y coordinates at the z coordinate of the hit
-	  double zPlane;
-	  double xPred = track->x(zPlane);
-	  double yPred = track->y(zPlane);
-	  
-	  int posN = 0;
-	  bool notHit = true;
-	  while(posN < numPos && notHit)
-	    {
-	      pos = event.position_list.at(posN);
-	      
-	      //If position is within radius to be acceptable "hit"
-	      if (std::abs(xPred - pos.x()) <= pos_eps_cm && std::abs(yPred - pos.y()) <= pos_eps_cm)
-		{
-		  nHits++;
-		  count++;
-		}
-	      else
-		count++;
-	    }
-	}
+      event = eventList.at(e);
 
-      efficiencies[plane] = double(nHits) / count;  
+      int numPos = event.position_list.size();
+      if (numPos < 3 || !event.goodTrack()) //If not at least 3 hits or a good track, cannot use
+      	continue;
+
+      for (int b = 0; b < NUM_BOARDS; b++) 
+	{    ///////////////////////////////////////Should all other boards be checked? Just in same CSC? etc?
+	  for (int i = 0; i < NUM_BOARDS; i++) /////////////////Check in pairs?
+	    {
+	      int *chans = event.getChannelsForBoard(i);
+	      int hitsAbove = 0;
+	      int hitsBelow = 0;
+	      for (int c = 0; c < NUM_CHANS; c++)
+		{ 
+		  if (chans[c] > 0)
+		    {
+		      if (i == b) //If hit is on the current board
+			efficiencies[b]++; 
+		      else if( i < b)
+			hitsAbove++;		
+		      else
+			hitsBelow++;
+		    }
+		}
+	      if ((hitsAbove + hitsBelow) >= 2)
+		expectedHits[b]++;
+	    }	  
+	}
     }
+  
+  //fprintf(effsFile, "#Voltage\tboard 1 efficiency\t...\tboard 16 efficiency\taverage efficiency\n");
+  fprintf(effsFile, "%4.1lf hits\t", voltage);
+  double avgEff = 0;
+  int hitBoardCount = 0;
+  //Efficiency is simply the number of hits on the board / total number of events
+  for (int b = 0; b < NUM_BOARDS; b++)
+    {
+      cout << efficiencies[b] << " / " << expectedHits[b]<< endl;
+      efficiencies[b] /= expectedHits[b];
+      fprintf(effsFile, "%1.4lf\t", efficiencies[b]);
+      avgEff += efficiencies[b];
+      if (efficiencies[b] > 0)
+	hitBoardCount++;
+    }
+  avgEff /= hitBoardCount;
+  fprintf(effsFile, "%1.4lf\n", avgEff);
+
+  fclose(effsFile);
 }
+
 
 
 void ReadTree::plotResiduals()
@@ -503,7 +538,8 @@ void ReadTree::plotResiduals()
 
   //Histograms to plot the deviation between theoretical (track-based) and actual (hits) positions
   TH2F *csc1Resids = new TH2F("csc1Devs","CSC #1 Abs(track pos - hit pos)",100, -5, 5, 100, -5, 5);
-  TH2F *csc0Resids = new TH2F("csc2Devs","CSC #0 Abs(track pos - hit pos)",100, -5, 5, 100, -5, 5);
+  TH2F *csc0Resids = new TH2F("csc0Devs","CSC #0 Abs(track pos - hit pos)",100, -5, 5, 100, -5, 5);
+
 
   for (int eventi = 0; eventi < eventList.size(); eventi++) //For each event
     {
@@ -521,21 +557,25 @@ void ReadTree::plotResiduals()
 	      x = pos.x();
 	      y = pos.y();
 	      z = pos.z();
-
+	      
 	      xPred = track->x(z);
 	      yPred = track->y(z);
 
 	      if (csc == 0)
-		csc0Resids->Fill(x - xPred, y - yPred);
+		{
+		  csc0Resids->Fill(x - xPred, y - yPred);
+		}
 	      else if (csc == 1)
-		csc1Resids->Fill(x - xPred, y - yPred);
+		{
+		  csc1Resids->Fill(x - xPred, y - yPred);
+		}
 
 	      posN++;
 	    }
     }
 
   TCanvas *residCanv = new TCanvas("residCanv","Residuals",1000,800);
-  residCanv->Divide(2,1);
+  residCanv->Divide(2,2);
   csc1Resids->SetXTitle("x_hit - x_track [cm]");
   csc1Resids->SetYTitle("y_hit - x_track [cm]");
   csc0Resids->SetXTitle("x_hit - x_track [cm]");
