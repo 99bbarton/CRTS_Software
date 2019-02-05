@@ -24,12 +24,12 @@
 #define CATHODE_WIDTH_Y 13.0f //0.510"
 #define CATHODE_PITCH_Y 15.0f//0.590"
 #define PANEL_THICKNESS 20.0f
-#define GAS_GAP_THICKENSS 10.0f
+#define GAS_GAP_THICKNESS 10.0f
 #define WIRE_PANEL_GAP 5.0f
 
 
 
-#define SPACING 500.0f
+#define SPACING 513.0f
 #define SPACING2 270.0f
 
-#define Z_UNCERTAINTY 1.0f
+#define Z_UNCERTAINTY 2.0f

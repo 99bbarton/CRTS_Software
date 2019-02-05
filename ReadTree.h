@@ -36,7 +36,7 @@ public:
 	void drawTracks();
 	void calcBoardEfficiencies(double voltage);
 	void makeOccupancyPlots();
-	void calcLayerTrackEfficiencies(double efficiencies[]);
+	void calcEfficienciesWithHits(double voltage);
 	void plotResiduals();
 	void plotTimingHists(TH1I*, TH1I*, TH1I*);
 
