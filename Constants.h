@@ -2,7 +2,7 @@
 
 //-----CUT PARAMETERS-----//
 #define TIME_CUT_LOW -10//-15
-#define TIME_CUT_HIGH 10//-10
+#define TIME_CUT_HIGH 10//-10 
 
 #define CHI2_NDF_CUT 10.0f
 
@@ -33,3 +33,14 @@
 #define SPACING2 270.0f
 
 #define Z_UNCERTAINTY 2.0f
+
+
+//------CRV Related Constants------// NEED CORRECT VALUES
+#define LAYER_OFFSET 40f
+#define DICOUNTER_GAP 0.5f
+#define COUNTER_GAP 0.1f
+#define COUNTER_WIDTH 51f
+#define COUNTER_HEIGHT 20f 
+#define ABSORBER_THICKNESS 3f
+#define STRONGBACK_THICKNESS 5f
+
