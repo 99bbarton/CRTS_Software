@@ -36,6 +36,7 @@
 
 
 //------CRV Related Constants------// NEED CORRECT VALUES
+#define NUM_COUNTERS 64
 #define LAYER_OFFSET 40f
 #define DICOUNTER_GAP 0.5f
 #define COUNTER_GAP 0.1f
