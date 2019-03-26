@@ -1,6 +1,7 @@
 //Implementation of the Module class representing a CRV module
 
 #include "Module.h"
+#include <TCanvas.h>
 
 //Default constuctor, do nothing
 Module::Module(){}
@@ -161,4 +162,186 @@ vector<Counter>* Module::getHitCounters(Track track) const
 	}
 
 	return hitCounters;
+}
+
+
+/*
+	Calculate the mean total (both ends) PE yield per cm of all hits and all counters
+*/
+double Module::calcAvgPE_per_cm() const
+{
+	double avg = 0;
+	double sideAval;
+	double sideBval;
+	int numHit = NUM_COUNTERS * 2;
+
+	for (int c = 0; c < NUM_COUNTERS; c++)
+	{
+		sideAval = countersA[c].calcAvg_PE_per_cm();
+		sideBval = countersB[c].calcAvgPE_per_cm();
+		if (sideAval + sideBval <= 0)
+			numHit--;
+		else
+			avg += sideAval + sideBval;
+	}
+
+	return avg / numHit;
+}
+
+
+/*
+	Make a histogram of the PE yields of every hit from every Counter (both ends)
+*/
+TH1F* Module::makePEHist() const
+{
+	TH1F* hist = new TH1F*("peHist", "PE Yield: All module Readouts", 100, 0, 100);
+	hist->SetXTitle("PE Yield");
+
+	vector<Hit> aSideHits;
+	vector<Hit> bSideHits;
+
+	for (int c = 0; c < NUM_COUNTERS; c++)
+	{
+		aSideHits = countersA[c].get_hits();
+		bSideHits = countersB[c].get_hits();
+		for (int h = 0; h < aSideHits.size(); h++)
+		{
+			hist->Fill(aSideHits.pop_back().get_PEyield());
+		}
+
+		for (int i = 0; i < bSideHits; i++)
+		{
+			hist->Fill(bSideHits.pop_back().get_PEyield());
+		}
+	}
+
+	return hist;
+}
+
+
+/*
+	Make a histogram of the PE yield per cm of every hit in both ends of every counter
+*/
+TH1F* Module::makePE_per_cm_Hist() const
+{
+	TH1F* hist = new TH1F*("pe_per_cm_Hist", "PE Yield per cm: All module Readouts", 100, 0, 100);
+	hist->SetXTitle("PE Yield per cm");
+
+	vector<Hit> aSideHits;
+	vector<Hit> bSideHits;
+
+	for (int c = 0; c < NUM_COUNTERS; c++)
+	{
+		aSideHits = countersA[c].get_hits();
+		bSideHits = countersB[c].get_hits();
+		for (int h = 0; h < aSideHits.size(); h++)
+		{
+			hist->Fill(aSideHits.pop_back().get_PE_per_cm());
+		}
+
+		for (int i = 0; i < bSideHits; i++)
+		{
+			hist->Fill(bSideHits.pop_back().get_PE_per_cm());
+		}
+	}
+
+	return hist;
+}
+
+
+/*
+	Plot the PE yield histograms of each counter
+
+	Plots on 4 canvases, 1 for each layer of the module. A side readouts plotted in blue, B side in red
+*/
+void Module::plotAllPEHists() const
+{
+	//Set up canvases
+	TCanvas canvases[4];
+	canvases[0] = new TCanvas("layer0Canv", "Layer 0 PE Yield", 800, 400);
+	canvases[1] = new TCanvas("layer1Canv", "Layer 1 PE Yield", 800, 400);
+	canvases[2] = new TCanvas("layer2Canv", "Layer 2 PE Yield", 800, 400);
+	canvases[3] = new TCanvas("layer3Canv", "Layer 3 PE Yield", 800, 400);
+	canvases[0].Divide(4, 2);
+	canvases[1].Divide(4, 2);
+	canvases[2].Divide(4, 2);
+	canvases[3].Divide(4, 2);
+
+	TH1F *aSideHist;
+	TH1F *bSideHist;
+	int layer, posInLayer;
+
+	for (int c = 0; c < NUM_COUNTERS; c++)
+	{
+		layer = countersA[c].get_layer();
+		posInLayer = countersA[c].get_posInLayer();
+
+		aSideHist = countersA[c].buildPE_Hist();
+		bSideHist = countersB[c].buildPE_Hist();
+		aSideHist->SetLineColor(kBlue);
+		bSideHist->SetLineColor(kRed);
+
+		canvases[layer].cd(posInLayer + 1);
+		aSideHist->Draw();
+		bSideHist->Draw("same");
+	}
+
+	for (int i = 0; i < 4; i++)
+	{
+		canvases[i]->Update();
+	}
+
+}
+
+
+/*
+Plot the PE yield per cm histograms of each counter
+
+Plots on 4 canvases, 1 for each layer of the module. A side readouts plotted in blue, B side in red
+*/
+void Module::plotAllPE_per_cm_Hists() const
+{
+	//Set up canvases
+	TCanvas canvases[4];
+	canvases[0] = new TCanvas("layer0Canv_2", "Layer 0 PE Yield per cm", 800, 400);
+	canvases[1] = new TCanvas("layer1Canv_2", "Layer 1 PE Yield per cm", 800, 400);
+	canvases[2] = new TCanvas("layer2Canv_2", "Layer 2 PE Yield per cm", 800, 400);
+	canvases[3] = new TCanvas("layer3Canv_2", "Layer 3 PE Yield per cm", 800, 400);
+	canvases[0].Divide(4, 2);
+	canvases[1].Divide(4, 2);
+	canvases[2].Divide(4, 2);
+	canvases[3].Divide(4, 2);
+
+	TH1F *aSideHist;
+	TH1F *bSideHist;
+	int layer, posInLayer;
+
+	for (int c = 0; c < NUM_COUNTERS; c++)
+	{
+		layer = countersA[c].get_layer();
+		posInLayer = countersA[c].get_posInLayer();
+
+		aSideHist = countersA[c].buildPE_Hist();
+		bSideHist = countersB[c].buildPE_Hist();
+		aSideHist->SetLineColor(kBlue);
+		bSideHist->SetLineColor(kRed);
+
+		canvases[layer].cd(posInLayer + 1);
+		aSideHist->Draw();
+		bSideHist->Draw("same");
+	}
+
+	for (int i = 0; i < 4; i++)
+	{
+		canvases[i]->Update();
+	}
+}
+
+
+/*
+	@TODO Make some sort of event display that displays module geometry, CRV hits, and CSC-produced tracks
+*/
+void Module::displayEvents()
+{
+
 }

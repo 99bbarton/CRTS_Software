@@ -8,6 +8,7 @@ using namespace std;
 //Default constructor - do nothing
 Counter::Counter(){}
 
+
 //Primary constructor - initialize fields
 Counter::Counter(double xMin, double zMin, int layer, int posInLayer, int id, int diSN)
 {
@@ -20,58 +21,76 @@ Counter::Counter(double xMin, double zMin, int layer, int posInLayer, int id, in
   hits = new map<int,Hit>();
 }
 
+
 //Destructor 
 Counter::~Counter(){
   delete hits;
 }
 
+
 int Counter::get_xMin() const{
   return xMin;
 }
+
 
 int Counter::get_xMax() const{
   return xMin + COUNTER_WIDTH;
 }
 
+
 int Counter::get_zMin() const{
   return zMin;
 }
+
 
 int Counter::get_zMax() const{
   return zMin + COUNTER_HEIGHT;
 }
 
+
 int Counter::get_layer() const{
   return layer
 }
+
 
 int Counter::get_posInLayer() const{
   return posInLayer;
 }
 
-int Counter::getDiCounterSN() const{
+
+int Counter::get_DicounterSN() const{
   return dicounterSN;
 }
 
-string Counter::getID() const{
+
+string Counter::get_ID() const{
   return id;
 }
 
-map<int,Hit> Counter::getHits() const{
+
+map<int,Hit> Counter::get_hitMap() const{
   return hits;
+}
+
+
+vector<Hit> Counter::get_hits() const
+{
+	return hits;
 }
 
 //@TODO Implement with actual CRV Event class
 //Add a hit to the counter's record
-bool Counter::addHit(CRVEvent crvEv, Track track)
+void Counter::addHit(CRVEvent crvEv, Track track)
 {
   Hit hit = new Hit(crvEV, calcPathLength(track));
+
+  hits.push_back(hit);
+
   pair<int,Hit> trig_hit (crvEV.trigNum, hit);
 
-  pair<map<int,Hit>::iterator,bool> insertResult;
-  insertResult = hits.insert(trig_hit);
-
-  return insertResult.second;
+  //pair<map<int,Hit>::iterator,bool> insertResult;
+  //insertResult = hitMap.insert(trig_hit);
+  //return insertResult.second;
 }
 
 
@@ -147,6 +166,7 @@ double Counter::calcPathLength(Track track) const
   return sqrt(pow(xHigh - xLow, 2) + pow(yHigh - yLow, 2) + pow(zHigh - zLow, 2));
 }
 
+
 /*
   Returns an int corresponding to the way a track passes through a counter
   @return
@@ -196,7 +216,7 @@ double Counter::calcAvg_PE_per_cm() const
   double pathLen_cm;
   double pe;
 
-  for (std::map<int,Hit>::iterator it = hits.begin(); it != hits.end(); ++it)
+  for (std::map<int,Hit>::iterator it = hitMap.begin(); it != hitMap.end(); ++it)
     {
       thisHit = it->second;
       if (thisHit.get_PathLength() > 0)
@@ -216,7 +236,7 @@ TH1F* Counter::buildPE_Hist() const
   hist->SetXTitle("PE Yield");
   Hit thisHit;
 
-  for (std::map<int,Hit>::iterator it = hits.begin(); it != hits.end(); ++it)
+  for (std::map<int,Hit>::iterator it = hitMap.begin(); it != hitMap.end(); ++it)
     {
       thisHit = it->second;
       hist->Fill(thisHit.get_PEyield());
@@ -235,7 +255,7 @@ TH1F* Counter::buildPE_per_cm_Hist() const
   hist->SetXTitle("PE Yield per cm");
   Hit thisHit;
 
-  for (std::map<int,Hit>::iterator it = hits.begin(); it != hits.end(); ++it)
+  for (std::map<int,Hit>::iterator it = hitMap.begin(); it != hitMap.end(); ++it)
     {
       thisHit = it->second;
       if (thisHit.get_PathLength() > 0)

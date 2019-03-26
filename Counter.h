@@ -22,9 +22,10 @@ class Counter{
   double get_zMax() const;
   int get_layer() const;
   int get_posInLayer() const;
-  string getID() const;
-  int getDicounterSN() const;
-  map<int,Hit> getHits() const;
+  string get_ID() const;
+  int get_DicounterSN() const;
+  map<int,Hit> get_hitMap() const;
+  vector<Hit> get_hits() const;
   bool addHit(CRVEvent, Track); //Add a hit to the counter's record
   double calcPathLength(Track) const; //Calc path length through counter
   double calcAvg_PE_per_cm() const; //Return avg PE/cm over all hits
@@ -36,7 +37,8 @@ class Counter{
   double zMin; //z coord of bottom of counter
   int layer; //0-3, bottom layer = 0
   int posInLayer; //0-15
-  map<int,Hit> hits; //Stores counter readout for each trigger
+  map<int,Hit> hitMap; //Stores counter readout for each trigger
+  vector<Hit> hits;
   int id; //Extrusion id e.g. 1111
   int dicounterSN; //Serial number of parent dicounter
   int trackIncidenceCase(Track) const; //Return an int corresponding to the way a track hits a counter

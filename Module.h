@@ -26,11 +26,11 @@ class Module{
   Counter[] get_countersB() const;
   void fillCounters(); //Apply the CRV and CSC data to the Counters
   vector<Counter> getHitCounters(Track t) const; //Return list of counters in a track
-  double calcAvgPE_per_cm(); //return mean(pe/cm) of all counters
-  TH1F* makePEHist();
-  TH1F* makePE_per_cm_Hist();
-  void plotAllPEHists(); //Plot PE hists of each counter
-  void plotAllPE_per_cm_Hists();
+  double calcAvgPE_per_cm() const; //return mean(pe/cm) of all counters
+  TH1F* makePEHist() const;
+  TH1F* makePE_per_cm_Hist() const;
+  void plotAllPEHists() const; //Plot PE hists of each counter
+  void plotAllPE_per_cm_Hists() const;
   void displayEvents(); //Calls event display class
 
  private:
